@@ -1,0 +1,288 @@
+import pygame
+import random
+import time
+import cx_Freeze
+
+
+# Inisialisasi pygame
+pygame.init()
+
+# Inisialisasi variabel
+clock = pygame.time.Clock()
+screen_width = 600
+screen_height = 700
+background = pygame.image.load('background.jpeg')
+
+# Sound
+crash_sound = pygame.mixer.Sound("crash_impact.mp3")
+crash_sound.set_volume(0.01)
+game_sound = pygame.mixer.Sound("game_sound.wav")
+game_sound.set_volume(0.01)
+
+screen = pygame.display.set_mode((screen_width, screen_height))
+
+red = (200,0,0)
+green = (0,200,0)
+
+bright_red = (255,0,0)
+bright_green = (0,255,0)
+
+# Kelas Player
+class Player:
+    def __init__(self):
+        self.image = pygame.image.load('player.png')
+        self.rect = self.image.get_rect()
+        self.rect.center = (screen_width / 2, screen_height - 100)
+        self.speed = 10
+
+    def move_left(self):
+        if self.rect.x - self.speed >= 115:
+            self.rect.x -= self.speed
+
+    def move_right(self):
+        if self.rect.x + self.speed <= 415:
+            self.rect.x += self.speed
+
+# Kelas Enemy
+class Enemy:
+    def __init__(self, speed=2):
+        self.image = pygame.image.load('enemy.png')
+        self.rect = self.image.get_rect()
+        self.enemy_spawn_location = [125, 220, 315, 415]
+        self.rect.x = random.choice(self.enemy_spawn_location)
+        self.rect.y = -200
+        self.speed = speed
+
+    def move(self):
+        self.rect.y += self.speed
+
+# Kelas Track
+class Track:
+    def __init__(self):
+        self.image = pygame.image.load('background.jpeg')
+        self.rect = self.image.get_rect()
+        self.rect.x = 0
+        self.rect.y = screen_height - self.rect.height
+
+# Fungsi untuk cek collision
+def check_collision(player, enemy):
+    for en in enemy:
+        if player.rect.colliderect(en.rect):
+            return True
+    return False
+
+# Fungsi untuk menghitung score
+def calculate_score(start_game):
+    score = int((pygame.time.get_ticks()-start_game)/100)
+    smalltext = pygame.font.Font("freesansbold.ttf", 30) 
+    textsurf, textrect = text_objects("Score : "+str(score), smalltext) 
+    textrect.center = (100, 35) 
+    return score, screen.blit(textsurf, textrect)
+
+# Fungsi untuk mengubah kecepatan enemy
+def increase_enemy_speed(enemy, score, enemy_speed):
+    if score != 0 and score % 100 == 0 and enemy_speed <= 7:
+        enemy_speed += 0.05
+        for en in enemy:
+            en.speed += 0.05
+    return enemy, enemy_speed
+
+def spawn_extra_enemy(enemy, enemy_speed):
+    more_enemy = Enemy(speed=enemy_speed)
+    while more_enemy.rect.x == enemy[-1].rect.x:
+        more_enemy = Enemy(speed=enemy_speed)
+    enemy.append(more_enemy)
+    return enemy
+
+def spawn_extra_enemy_2(enemy, enemy_speed):
+    more_enemy1 = Enemy(speed=enemy_speed)
+    while more_enemy1.rect.x == enemy[-1].rect.x:
+        more_enemy1 = Enemy(speed=enemy_speed)
+    more_enemy2 = Enemy(speed=enemy_speed)
+    while more_enemy2.rect.x == more_enemy1.rect.x:
+        more_enemy2 = Enemy(speed=enemy_speed)
+    enemy.append(more_enemy1)
+    enemy.append(more_enemy2)
+    return enemy
+
+# Fungsi untuk efek suara
+def play_sound():
+    game_sound.stop()
+    crash_sound.play()
+    pass
+
+def text_objects(text, font): 
+    textsurface = font.render(text, True, (0, 0, 0)) 
+    return textsurface, textsurface.get_rect() 
+
+def message_display(text, sleep_time=3, text_size=80): 
+    largetext = pygame.font.Font("freesansbold.ttf", text_size) 
+    textsurf, textrect = text_objects(text, largetext) 
+    textrect.center = ( 
+        (screen_width/2), 
+        (screen_height/2)) 
+    screen.blit(textsurf, textrect) 
+    pygame.display.update() 
+    time.sleep(sleep_time)
+
+def button(msg,x,y,w,h,ic,ac,action=None):
+    mouse = pygame.mouse.get_pos()
+    click = pygame.mouse.get_pressed()
+
+    if x+w > mouse[0] > x and y+h > mouse[1] > y:
+        pygame.draw.rect(screen, ac,(x,y,w,h))
+        if click[0] == 1 and action != None:
+            action()         
+    else:
+        pygame.draw.rect(screen, ic,(x,y,w,h))
+    smallText = pygame.font.SysFont("comicsansms",20)
+    textSurf, textRect = text_objects(msg, smallText)
+    textRect.center = ( (x+(w/2)), (y+(h/2)) )
+    screen.blit(textSurf, textRect)
+
+def quitgame():
+    pygame.quit()
+    
+#Fungsi untuk deploy exe 
+def deploy_exe():
+    executables = [cx_Freeze.Executable("Cargame.py", base = "Win32GUI")]
+
+    cx_Freeze.setup(
+        name="CARACE GAME",
+        options={"build_exe": {
+                            "packages":["pygame"],
+                            "include_files":[
+                                "background.jpeg",
+                                "crash_impact.mp3",
+                                "Enemy.png",
+                                "Player.png",
+                                "game_sound.wav"
+                                ]
+                            }
+                    },
+        executables = executables
+        )
+
+# Fungsi untuk deploy ke web hosting
+def deploy_web():
+    pass
+
+
+def main_menu():
+    player = Player()
+    track = Track()
+    screen.blit(background, (0, 0)) 
+    screen.blit(track.image, track.rect)
+    screen.blit(player.image, player.rect)
+    
+    message_display("CARACE GAME", sleep_time=0, text_size=40) 
+    
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                
+        button("Play",(screen_width/2)-125,450,100,50,green,bright_green,game_loop)
+        button("Quit",(screen_width/2)+25,450,100,50,red,bright_red,quitgame)
+
+        pygame.display.update()
+        clock.tick(60) 
+
+
+# Loop utama
+def game_loop():
+    running = True
+    player_moving_left = False
+    player_moving_right = False
+    
+    start_game = pygame.time.get_ticks()
+    enemy_speed = 2
+    
+    # Inisialisasi objek
+    player = Player()
+    track = Track()
+    enemy = [Enemy(speed=enemy_speed)]
+    
+    game_sound.play(-1)
+    
+    while running:
+        screen.blit(background, (0, 0))
+        screen.blit(track.image, track.rect)
+        screen.blit(player.image, player.rect)
+        score, blit = calculate_score(start_game)
+        blit
+        
+        enemy, enemy_speed = increase_enemy_speed(enemy, score, enemy_speed)
+                
+        # Spawn Enemy
+        if enemy[-1].rect.y >= 175:
+            enemy.append(Enemy(speed=enemy_speed))
+            
+            # Add Extra Enemies
+            if 500 < score < 1000 and random.randint(0,10) > 7.5:
+                enemy = spawn_extra_enemy(enemy, enemy_speed)
+            elif 1000 < score < 1500 and random.randint(0,10) > 5:
+                enemy = spawn_extra_enemy(enemy, enemy_speed)
+            elif score > 1500:
+                chance = random.randint(0,10)
+                if chance > 8:
+                    enemy = spawn_extra_enemy_2(enemy, enemy_speed)
+                elif chance > 5:
+                    enemy = spawn_extra_enemy(enemy, enemy_speed)
+            
+            # Destroy passed enemy
+            if enemy[0].rect.y >= 1000:
+                del enemy[0]
+        
+        for en in enemy:
+            screen.blit(en.image, en.rect)
+
+        # Check for events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            # Check for key presses
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    player_moving_left = True
+                elif event.key == pygame.K_RIGHT:
+                    player_moving_right = True
+
+            # Check for key releases
+            elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_LEFT:
+                    player_moving_left = False
+                elif event.key == pygame.K_RIGHT:
+                    player_moving_right = False
+
+        # Move the player based on key state
+        if player_moving_left:
+            player.move_left()
+        if player_moving_right:
+            player.move_right()
+        
+        for en in enemy:
+            en.move()
+            
+        if check_collision(player, enemy):
+            play_sound()
+            message_display("YOU CRASHED") 
+            # Akhiri game
+            while True:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        
+                button("Play Again",(screen_width/2)-125,450,100,50,green,bright_green,game_loop)
+                button("Quit",(screen_width/2)+25,450,100,50,red,bright_red,quitgame)
+
+                pygame.display.update()
+                clock.tick(60) 
+        
+        pygame.display.update()
+        clock.tick(60)
+
+main_menu()
+game_loop()
+pygame.quit()
