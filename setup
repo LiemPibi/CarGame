@@ -1,0 +1,21 @@
+# Fungsi untuk deploy ke file exe
+
+import cx_Freeze
+
+executables = [cx_Freeze.Executable("Cargame.py", base = "Win32GUI")]
+
+cx_Freeze.setup(
+    name="CARACE GAME",
+    options={"build_exe": {
+                        "packages":["pygame"],
+                        "include_files":[
+                            "background.jpeg",
+                            "crash_impact.mp3",
+                            "Enemy.png",
+                            "Player.png",
+                            "game_sound.wav"
+                            ]
+                        }
+                },
+    executables = executables
+    )
